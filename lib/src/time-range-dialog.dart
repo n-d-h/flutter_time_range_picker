@@ -1,9 +1,9 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:time_range_picker/src/clock-gesture-recognizer.dart';
-import 'package:time_range_picker/src/clock-painter.dart';
-import 'package:time_range_picker/src/utils.dart';
+import 'package:ndh_time_range_picker/src/clock-gesture-recognizer.dart';
+import 'package:ndh_time_range_picker/src/clock-painter.dart';
+import 'package:ndh_time_range_picker/src/utils.dart';
 
 showTimeRangePicker({
   required BuildContext context,

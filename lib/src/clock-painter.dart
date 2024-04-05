@@ -1,7 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:time_range_picker/src/utils.dart';
+import 'package:ndh_time_range_picker/src/utils.dart';
 
 class ClockPainter extends CustomPainter {
   double? startAngle;

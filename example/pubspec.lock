@@ -131,6 +131,13 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.11.0"
+  ndh_time_range_picker:
+    dependency: "direct main"
+    description:
+      path: ".."
+      relative: true
+    source: path
+    version: "2.2.0"
   path:
     dependency: transitive
     description:
@@ -192,13 +199,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.6.1"
-  time_range_picker:
-    dependency: "direct main"
-    description:
-      path: ".."
-      relative: true
-    source: path
-    version: "2.2.0"
   vector_math:
     dependency: transitive
     description:
