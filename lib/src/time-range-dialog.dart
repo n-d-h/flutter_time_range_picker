@@ -15,7 +15,7 @@ showTimeRangePicker({
   TimeOfDay? end,
 
   /// disabled time range (this time cannot be selected)
-  TimeRange? disabledTime,
+  List<TimeRange>? disabledTimes,
 
   /// the color for the disabled section
   Color? disabledColor,
@@ -130,7 +130,7 @@ showTimeRangePicker({
       child: TimeRangePicker(
         start: start,
         end: end,
-        disabledTime: disabledTime,
+        disabledTimes: disabledTimes,
         paintingStyle: paintingStyle,
         onStartChange: onStartChange,
         onEndChange: onEndChange,
@@ -182,7 +182,7 @@ class TimeRangePicker extends StatefulWidget {
   final TimeOfDay? start;
   final TimeOfDay? end;
 
-  final TimeRange? disabledTime;
+  final List<TimeRange>? disabledTimes;
 
   final void Function(TimeOfDay)? onStartChange;
   final void Function(TimeOfDay)? onEndChange;
@@ -234,7 +234,7 @@ class TimeRangePicker extends StatefulWidget {
     Key? key,
     this.start,
     this.end,
-    this.disabledTime,
+    this.disabledTimes,
     this.onStartChange,
     this.onEndChange,
     this.fromText = "From",
@@ -288,8 +288,8 @@ class TimeRangePickerState extends State<TimeRangePicker>
   double _startAngle = 0;
   double _endAngle = 0;
 
-  double? _disabledStartAngle;
-  double? _disabledEndAngle;
+  List<double>? _disabledStartAngles;
+  List<double>? _disabledEndAngles;
 
   final GlobalKey _circleKey = GlobalKey();
   final GlobalKey _wrapperKey = GlobalKey();
@@ -302,10 +302,13 @@ class TimeRangePickerState extends State<TimeRangePicker>
   @override
   void initState() {
     _offsetRad = (widget.clockRotation * pi / 180);
+    _disabledStartAngles = [];
+    _disabledEndAngles = [];
 
     WidgetsBinding.instance.addObserver(this);
     setAngles();
     WidgetsBinding.instance.addPostFrameCallback((_) => setRadius());
+
 
     super.initState();
   }
@@ -359,11 +362,19 @@ class TimeRangePickerState extends State<TimeRangePicker>
 
       _endAngle = timeToAngle(_endTime, _offsetRad);
 
-      if (widget.disabledTime != null) {
-        _disabledStartAngle =
-            timeToAngle(widget.disabledTime!.startTime, _offsetRad);
-        _disabledEndAngle =
-            timeToAngle(widget.disabledTime!.endTime, _offsetRad);
+      // if (widget.disabledTime != null) {
+      //   _disabledStartAngle =
+      //       timeToAngle(widget.disabledTime!.startTime, _offsetRad);
+      //   _disabledEndAngle =
+      //       timeToAngle(widget.disabledTime!.endTime, _offsetRad);
+      // }
+      if (widget.disabledTimes != null && widget.disabledTimes!.isNotEmpty) {
+        for (var disabledTime in widget.disabledTimes!) {
+          var _startAngle = timeToAngle(disabledTime.startTime, _offsetRad);
+          var _endAngle = timeToAngle(disabledTime.endTime, _offsetRad);
+          _disabledStartAngles?.add(_startAngle);
+          _disabledEndAngles?.add(_endAngle);
+        }
       }
     });
   }
@@ -455,28 +466,33 @@ class TimeRangePickerState extends State<TimeRangePicker>
           angleToEndSigned < 0 ? 2 * pi + angleToEndSigned : angleToEndSigned;
 
       //check if hitting disabled
-      if (widget.disabledTime != null) {
-        var angleToDisabledStart = signedAngle(_disabledStartAngle!, dir);
-        var angleToDisabledEnd = signedAngle(_disabledEndAngle!, dir);
+      if (widget.disabledTimes != null && widget.disabledTimes!.isNotEmpty) {
+        for (var disabledTime in widget.disabledTimes!) {
+          var disabledStartAngle = timeToAngle(disabledTime.startTime, _offsetRad);
+          var disabledEndAngle = timeToAngle(disabledTime.endTime, _offsetRad);
 
-        var disabledAngleSigned =
-            signedAngle(_disabledEndAngle!, _disabledStartAngle!);
-        var disabledDiff = disabledAngleSigned < 0
-            ? 2 * pi + disabledAngleSigned
-            : disabledAngleSigned;
+          // Calculate the signed angles to the disabled time range
+          var angleToDisabledStart = signedAngle(disabledStartAngle, dir);
+          var angleToDisabledEnd = signedAngle(disabledEndAngle, dir);
 
-        //print("to disabled start " + (angleToDisabledStart * 180 / pi).toString());
-        // print("to disabled end " + (angleToDisabledEnd * 180 / pi).toString());
+          // Calculate the signed angle difference of the disabled time range
+          var disabledAngleSigned = signedAngle(disabledEndAngle, disabledStartAngle);
+          var disabledDiff = disabledAngleSigned < 0
+              ? 2 * pi + disabledAngleSigned
+              : disabledAngleSigned;
 
-        if (angleToDisabledStart - minDurationAngle < 0 &&
-            angleToDisabledStart > -disabledDiff / 2) {
-          dir = _disabledStartAngle! - minDurationAngle;
-          _updateTimeAndSnapAngle(ActiveTime.End, _disabledStartAngle!);
-        } else if (angleToDisabledEnd > 0 &&
-            angleToDisabledEnd < disabledDiff / 2) {
-          dir = _disabledEndAngle!;
+          // Check if the gesture angle is within the disabled time range
+          if (angleToDisabledStart < 0 && angleToDisabledStart > -disabledDiff / 2) {
+            // Adjust the gesture angle to be outside the disabled range
+            dir = disabledStartAngle - minDurationAngle;
+            _updateTimeAndSnapAngle(ActiveTime.End, disabledStartAngle);
+          } else if (angleToDisabledEnd > 0 && angleToDisabledEnd < disabledDiff / 2) {
+            // Adjust the gesture angle to be outside the disabled range
+            dir = disabledEndAngle;
+          }
         }
       }
+
 
       // if after end time -> push end time ahead
       if (angleToEnd > 0 && angleToEnd < minDurationAngle) {
@@ -502,30 +518,33 @@ class TimeRangePickerState extends State<TimeRangePicker>
           : angleToStartSigned;
 
       //check if hitting disabled
-      if (widget.disabledTime != null) {
-        var angleToDisabledStart = signedAngle(_disabledStartAngle!, dir);
-        var angleToDisabledEnd = signedAngle(_disabledEndAngle!, dir);
+      if (widget.disabledTimes != null && widget.disabledTimes!.isNotEmpty) {
+        for (var disabledTime in widget.disabledTimes!) {
+          var disabledStartAngle = timeToAngle(disabledTime.startTime, _offsetRad);
+          var disabledEndAngle = timeToAngle(disabledTime.endTime, _offsetRad);
 
-        var disabledAngleSigned =
-            signedAngle(_disabledEndAngle!, _disabledStartAngle!);
-        var disabledDiff = disabledAngleSigned < 0
-            ? 2 * pi + disabledAngleSigned
-            : disabledAngleSigned;
+          // Calculate the signed angles from the gesture position to the start and end angles of the disabled range
+          var angleToDisabledStart = signedAngle(disabledStartAngle, dir);
+          var angleToDisabledEnd = signedAngle(disabledEndAngle, dir);
 
-        //print("to disabled start " + (angleToDisabledStart * 180 / pi).toString());
-        //print("to disabled end " + (angleToDisabledEnd * 180 / pi).toString());
+          // Calculate the signed angle difference of the disabled time range
+          var disabledAngleSigned = signedAngle(disabledEndAngle, disabledStartAngle);
+          var disabledDiff = disabledAngleSigned < 0
+              ? 2 * pi + disabledAngleSigned
+              : disabledAngleSigned;
 
-        //print("disabled diff " + (disabledDiff * 180 / pi).toString());
-
-        if (angleToDisabledStart < 0 &&
-            angleToDisabledStart > -disabledDiff / 2) {
-          dir = _disabledStartAngle!;
-        } else if (angleToDisabledEnd + minDurationAngle > 0 &&
-            angleToDisabledEnd < disabledDiff / 2) {
-          dir = _disabledEndAngle! + minDurationAngle;
-          _updateTimeAndSnapAngle(ActiveTime.Start, _disabledEndAngle!);
+          // Check if the gesture angle is within the disabled time range and adjust it accordingly
+          if (angleToDisabledStart < 0 &&
+              angleToDisabledStart > -disabledDiff / 2) {
+            dir = disabledStartAngle;
+          } else if (angleToDisabledEnd > 0 &&
+              angleToDisabledEnd < disabledDiff / 2) {
+            dir = disabledEndAngle + minDurationAngle;
+            _updateTimeAndSnapAngle(ActiveTime.Start, disabledEndAngle);
+          }
         }
       }
+
 
       // if before start time -> push start time ahead
       if (angleToStart > 0 && angleToStart < minDurationAngle) {
@@ -697,8 +716,8 @@ class TimeRangePickerState extends State<TimeRangePicker>
                     activeTime: _activeTime,
                     startAngle: _startAngle,
                     endAngle: _endAngle,
-                    disabledStartAngle: _disabledStartAngle,
-                    disabledEndAngle: _disabledEndAngle,
+                    disabledStartAngles: _disabledStartAngles,
+                    disabledEndAngles: _disabledEndAngles,
                     radius: _radius,
                     strokeWidth: widget.strokeWidth,
                     handlerRadius: widget.handlerRadius,
